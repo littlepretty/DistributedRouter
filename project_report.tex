@@ -1,6 +1,15 @@
 \documentclass[12pt]{article}  % [12pt] option for the benefit of aging markers
-\usepackage{amssymb,amsthm}    % amssymb package contains more mathematical symbols
-\usepackage{graphicx}          % graphicx package enables you to paste in graphics
+
+% amssymb package contains more mathematical symbols
+\usepackage{amssymb,amsthm}
+
+% graphicx package enables you to paste in graphics
+\usepackage{graphicx}
+\usepackage{auto-pst-pdf}
+
+% embed source inside latex
+\usepackage[procnames]{listings}
+\usepackage{color}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -103,7 +112,7 @@ The solution is simple.
 Every router advertise its current known column and row in its the incomplete.
 Once a router receives advertisement from other router, if the router does not have any (row, column) tuples in the messages, it inserts this information to its database.
 In other words, the essential of each message is the name of the router/sender, which, playing as a \textit{key}, indicate the row index and column index this message contains.
-Then goes the \textit{value} a tuple containing the elements in the row and the elements in the column.
+Then goes the \textit{value}, a tuple containing the elements in the row and the elements in the column.
 An advertisement from any router contains a sequence of messages if the router has more than 1 (row, column) record in its database.
 
 \subsection{Measuring the Discovery Process}
@@ -112,51 +121,162 @@ For example, at the initial stage, every router only knows 1 row and 1 column of
 So everyone starts from percentage $1/N$ where $N$ is total number of routers in the network.
 At iteration $n=1$, $R_2$ received messages from router $R_1$ and $R_6$; then it has 3 rows and 3 colums, which means 50\% of the network is known to $R_2$.
 
-\subsection{Simulation and Termination}
+\section{Simulation and Termination}
 We can simulate the distributed discovery process.
+Simulation's basic flow is shown in Listing \ref{lst:while-loop}.
+
+\subsection{Termination}
 The discovery step is repeated until all of the routers' topology database is stable.
-That is, the boolean variable $updated$ is never be set to $True$ when any router $r$ invokes \texttt{update\_topo()}
+That is, we jump out of the while-loop when the boolean variable $updated$ is never set to $True$ when any router $r$ invokes \texttt{update\_topo()}.
+The reason is simple: if every router's topology database is identical, no new information will be transferred between each other.
+At this moment, all routers must have the same and correct network view, except for that something happened after the population ends.
+In this case, just restart the discovery process at each router and wait for them to converge again.
+
+\subsection{Code Structure}
+Inside the while-loop, we have a scatter-gather pattern.
+In the scatter phase, router $r$ will receive messages from its each neighbors $n$ who can reach $r$ directly.
+In the gathering phase, each router update its topology databased by handling the received messages, stored inside its buffer.
+
+% Python code embedding configuration
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{0,0,113}
+\definecolor{red}{RGB}{160,0,0}
+\definecolor{green}{RGB}{0,150,0}
+\lstset{language=Python,
+        basicstyle=\ttfamily\small,
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+        identifierstyle=\color{green},
+        procnamekeys={def,class,True},
+        frame=single,
+        numbers=left,
+        numbersep=5pt,
+        numberstyle=\tiny\color{blue},
+        rulecolor=\color{black},
+        caption={Simulation Discovery Process},
+        label=lst:while-loop,
+        language=Python,
+}
+\begin{lstlisting}
+while updated:
+    for r in routers:
+        for n in r.neighbors:
+            router_n = get_router_by_name(n, routers)
+            for n_name, n_row_col in router_n.topo.items():
+                n_msg = (n_name, n_row_col)
+                r.recv_msg(n_msg)
+    updated = False
+    for r in routers:
+        if r.update_topo_database():
+            updated = True
+\end{lstlisting}
+
+\section{Experiment Results}
+In this section, the discovery progresses for router $R_1$ and $R_6$ are shown.
+
+\subsection{Results for $R_1$}
+At each iteration, the snapshot of $R_1$'s topology database is shown in Listing \ref{lst:r1}.
+For example, at the 3rd iteration, $R_1$ found out 3 other routers exist in the network.
+One of them is called $R6$, who can reach $R_2$ and $R_3$ with cost 8 and 5 respectively;
+also this $R_6$ can be reached from another router $R_5$ with cost 9.
+
+\lstset{basicstyle=\ttfamily\small,
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+        identifierstyle=\color{green},
+        procnamekeys={def,class},
+        frame=single,
+        numbers=left,
+        numbersep=5pt,
+        numberstyle=\tiny\color{blue},
+        rulecolor=\color{black},
+        caption={$R_1$'s Topology at Each Iteration},
+        label=lst:r1,
+        language=Python}
+\begin{lstlisting}
+0  [  ('r1', ({'r2': 3}, {'r2': 4}))  ]
+1  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3}))  ]
+2  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+3  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+4  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+5  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
+      ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+\end{lstlisting}
 
 
-%  \begin{center}
-%  \includegraphics{myfile.pdf}
-%  \includegraphics{myfile.jpg}
-%
-%  \includegraphics[width=175mm]{myfile.pdf}    if you need to change the size
-%
-%  \includegraphics[width=150mm, height=100mm]{myfile.pdf}  if you need to change the size in both directions
-%
-%  \includegraphics[angle=90]{myfile.pdf}     if you need to rotate the image
-%
-%  \includegraphics[angle=270,width=120mm]{myfile.pdf}  if you need to rotate and change size
-%
-%  \end{center}
+\subsection{Results for $R_6$}
+At each iteration, the snapshot of $R_6$'s topology database is shown in Listing \ref{lst:r6}.
+For example, at the 3rd iteration, $R_1$ found out 3 other routers exist in the network.
+One of them is called $R_3$, who can reach $R_4$ with cost 7;
+also this $R_3$ can be reached from either router $R_6$ with cost 5 or router $R_2$ with cost 6.
 
-\section{Lists and Tables}
+\lstset{basicstyle=\ttfamily\small,
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+        identifierstyle=\color{green},
+        procnamekeys={def,class},
+        frame=single,
+        numbers=left,
+        numbersep=5pt,
+        numberstyle=\tiny\color{blue},
+        rulecolor=\color{black},
+        caption={$R_6$'s Topology at Each Iteration},
+        label=lst:r6,
+        language=Python}
+\begin{lstlisting}
+0  [  ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+1  [  ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+2  [  ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+3  [  ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
+      ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+4  [  ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
+      ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+5  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
+      ('r4', ({'r5': 11}, {'r3': 7})), 
+      ('r5', ({'r6': 9}, {'r4': 11})), 
+      ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
+\end{lstlisting}
 
-It is often useful to display information in the form of a list or a table.
-Here will display some examples of:
+\subsection{Discovery Percentage as a function of the iteration number}
+As a function of iteration, the percentage of network discovered by router $R_1$ and $R_6$ is shown in Figure \ref{fig:progress}.
+The iteration number begins from 0 and ends at 6, an extra iteration to ensure that all routers in this network hold identical topology database.
 
-\begin{itemize}
-\item A function $f$;
-\item Its derivative $f'$; and
-\item Its indefinite integral $\int f$.
-\end{itemize}
-
-\begin{center}              % center the table
-\begin{tabular}{|r|r|r|}    % three columns, each right-justified
-\hline                      % horizontal line between rows
-$f$ & $f'$ & $\int f$ \\    % header row
-\hline
-$x^3$ & $3x^2$ & $x^4/4$ \\
-$\cos(x)$ & $-\sin(x)$ & $\sin(x)$ \\
-$e^x$ & $e^x$ & $e^x$\\
-\hline
-\end{tabular}               % close the table
-\end{center}                % exit the center environment
-
-\section{Conclusions}\label{s:conc}
-
+\begin{figure}[h]
+\centering
+        \includegraphics[width=0.8\textwidth, height=0.8\textheight]{progress.ps}
+\caption{Discovery Percentage as Function of Iteration for $R_1$ and $R_6$}
+\label{fig:progress}
+\end{figure}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -167,7 +287,7 @@ $e^x$ & $e^x$ & $e^x$\\
 %     To cite this publication in your text, write \cite{How97}.  To include more details such as
 %     page, Chapter, Theorem numbers, use the form \cite[Theorem 6.3, page 42]{How97}.
 %
-\begin{thebibliography}{99}
+%\begin{thebibliography}{99}
 
 % 
 % The usual convention for mathematical bibliographies is to list alphabetically
@@ -176,37 +296,37 @@ $e^x$ & $e^x$ & $e^x$\\
 %
 
 
-
 % Typical layout for reference to a journal article
 %
-\bibitem{Bovey}
-J. D. Bovey, M. M. Dodson,                         % author(s)
-The Hausdorff dimension of systems of linear forms % article name
-{\em Acta Arithmetica}                             % journal name - italics
-{\bf 45}                                           % volume number - bold
-(1986), 337--358.                                   % (year), page range
+%\bibitem{Bovey}
+%J. D. Bovey, M. M. Dodson,                         % author(s)
+%The Hausdorff dimension of systems of linear forms % article name
+%{\em Acta Arithmetica}                             % journal name - italics
+%{\bf 45}                                           % volume number - bold
+%(1986), 337--358.                                   % (year), page range
 
-% Typical layout for reference to a book
-%
-\bibitem{Cassels}
-J. W. S. Cassels,                                  % author(s)
-{\em An Introduction to Diophantine Approximation},% title - italics
-Cambridge University Press, Cambridge, 1965.       % Publisher, place, date.
+%% Typical layout for reference to a book
+%%
+%\bibitem{Cassels}
+%J. W. S. Cassels,                                  % author(s)
+%{\em An Introduction to Diophantine Approximation},% title - italics
+%Cambridge University Press, Cambridge, 1965.       % Publisher, place, date.
 
-% Typical layout for reference to a website
-%
-\bibitem{GAP}
-The GAP Group, GAP -- Groups, Algorithms, and Programming,  % Site name
-Version 4.5.6; 2012. % other information
-(http://www.gap-system.org)  % URL
+%% Typical layout for reference to a website
+%%
+%\bibitem{GAP}
+%The GAP Group, GAP -- Groups, Algorithms, and Programming,  % Site name
+%Version 4.5.6; 2012. % other information
+%(http://www.gap-system.org)  % URL
 
 
-% Typical layout for reference to an online article
-%
-\bibitem{Howie}
-J. Howie,                                            % author(s)
-{\em Generalised triangle groups of type $(3,5,2)$}, % article name - italics
-http://arxiv.org/abs/1102.2073                       % URL
-(2011).                                              % (year)
-\end{thebibliography}
+%% Typical layout for reference to an online article
+%%
+%\bibitem{Howie}
+%J. Howie,                                            % author(s)
+%{\em Generalised triangle groups of type $(3,5,2)$}, % article name - italics
+%http://arxiv.org/abs/1102.2073                       % URL
+%(2011).                                              % (year)
+%\end{thebibliography}
+
 \end{document}
