@@ -1,0 +1,212 @@
+\documentclass[12pt]{article}  % [12pt] option for the benefit of aging markers
+\usepackage{amssymb,amsthm}    % amssymb package contains more mathematical symbols
+\usepackage{graphicx}          % graphicx package enables you to paste in graphics
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%    Page size commands.  Don't worry about these
+%
+\setlength{\textheight}{220mm}
+\setlength{\topmargin}{-10mm}
+\setlength{\textwidth}{150mm}
+\setlength{\oddsidemargin}{0mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%    Definitions of environments for theorems etc.
+%
+\newtheorem{theorem}{Theorem}[section]          % Theorems numbered within sections - eg Theorem 2.1 in Section 2.
+\newtheorem{corollary}[theorem]{Corollary}      % Corollaries etc. will be counted as Theorems for numbering
+\newtheorem{lemma}[theorem]{Lemma}              % eg Lemma 3.1, ... Theorem 3.2, ... Corollary 3.3.
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%        Preamble material specific to your essay
+%
+\title{Discovery Network Topology}
+\author{Jiaqi Yan\\
+CS542 Project\\
+supervised by
+Edward Chlebus}
+
+\begin{document}
+\maketitle
+
+% \newpage                     % optional page break
+\begin{abstract}
+In this project, we first propose the format of topology update message for correct topology discovery.
+The \textit{portion of the network seen by a router} is used to quantify the efficiency of the network update process.
+A small scale network built by 6 routers is simulated to demonstrate the process of populating topology information.
+The simulation, as well as the distributed discovery algorithm, should terminate when every router's \textit{topology database} is stable.
+Results are shown for router $R_1$ and router $R_6$.
+\end{abstract}
+
+\newpage                     % optional page break
+\tableofcontents
+
+\newpage                     % optional page break
+\section{Problem Statement}\label{s:intro}
+%
+% The \label command is optional, but useful.  To cross-refer to a section/theorem/equation etc.
+% labelled by \label{key}, use \ref{key}.  For example: Equation (\ref{eq:key}) follows from Theorem \ref{th:key}.
+
+In this project, we explore the problem of letting distributed routers know the entire network topology.
+As the `God' of the network, we network operator have the global view of the it.
+The routers, however, only knows its direct neighbors. 
+Here we are considering unidirectional links.
+So \textbf{neighbors} of a particular router $r$ can fall into one of two cases: the one that can be reached from $r$ and the one that can reach $r$.
+
+The problem can be stated more formally as follows. The network topology as the adjacent matrix $AM$ is given to us.
+An example is shown below:
+\begin{center}
+\begin{tabular}{|r|r|r|r|r|r|r|}        % 7 columns, each right-justified
+\hline                                  % horizontal line between rows
+ & $R_1$ & $R_2$ & $R_3$ & $R_4$ & $R_5$ & $R_6$ \\ % header row
+\hline
+$R_1$ &   & 3 &   &   &    & \\
+\hline
+$R_2$ & 4 &   & 6 &   &    & \\
+\hline
+$R_3$ &   &   &   & 7 &    & \\
+\hline
+$R_4$ &   &   &   &   & 11 & \\
+\hline
+$R_5$ &   &   &   &   &    & 9 \\
+\hline
+$R_6$ &   & 8 & 5 &   &    & \\
+\hline
+\end{tabular}
+\end{center}
+The cost from source router $s$ to destination $d$ is given as $AM[s][d]$.
+Empty cell means the cost is $\infty$, meaning no link exist between router $s$ and $d$.
+Every router $r$ maintain its \textbf{topology database}. 
+Initially, this database contains only row $r$ and column $r$ in matrix $AM$ because
+\begin{itemize}
+        \item $r$ is aware the routers it can goes to, corresponding to row $AM[r][0..N-1]$
+        \item $r$ knows the routers that can goes to itself, corresponding to column $AM[0..N-1][r]$
+\end{itemize}
+The problem is: how to let each router has the entire topology matrix?
+
+\section{Discovery Process}
+
+\subsection{Message Format}
+The solution is simple.
+Every router advertise its current known column and row in its the incomplete.
+Once a router receives advertisement from other router, if the router does not have any (row, column) tuples in the messages, it inserts this information to its database.
+In other words, the essential of each message is the name of the router/sender, which, playing as a \textit{key}, indicate the row index and column index this message contains.
+Then goes the \textit{value} a tuple containing the elements in the row and the elements in the column.
+An advertisement from any router contains a sequence of messages if the router has more than 1 (row, column) record in its database.
+
+\subsection{Measuring the Discovery Process}
+An obvious metric is the percentage of the network topology matrix a router currently has.
+For example, at the initial stage, every router only knows 1 row and 1 column of the matrix.
+So everyone starts from percentage $1/N$ where $N$ is total number of routers in the network.
+At iteration $n=1$, $R_2$ received messages from router $R_1$ and $R_6$; then it has 3 rows and 3 colums, which means 50\% of the network is known to $R_2$.
+
+\subsection{Simulation and Termination}
+We can simulate the distributed discovery process.
+The discovery step is repeated until all of the routers' topology database is stable.
+That is, the boolean variable $updated$ is never be set to $True$ when any router $r$ invokes \texttt{update\_topo()}
+
+
+%  \begin{center}
+%  \includegraphics{myfile.pdf}
+%  \includegraphics{myfile.jpg}
+%
+%  \includegraphics[width=175mm]{myfile.pdf}    if you need to change the size
+%
+%  \includegraphics[width=150mm, height=100mm]{myfile.pdf}  if you need to change the size in both directions
+%
+%  \includegraphics[angle=90]{myfile.pdf}     if you need to rotate the image
+%
+%  \includegraphics[angle=270,width=120mm]{myfile.pdf}  if you need to rotate and change size
+%
+%  \end{center}
+
+\section{Lists and Tables}
+
+It is often useful to display information in the form of a list or a table.
+Here will display some examples of:
+
+\begin{itemize}
+\item A function $f$;
+\item Its derivative $f'$; and
+\item Its indefinite integral $\int f$.
+\end{itemize}
+
+\begin{center}              % center the table
+\begin{tabular}{|r|r|r|}    % three columns, each right-justified
+\hline                      % horizontal line between rows
+$f$ & $f'$ & $\int f$ \\    % header row
+\hline
+$x^3$ & $3x^2$ & $x^4/4$ \\
+$\cos(x)$ & $-\sin(x)$ & $\sin(x)$ \\
+$e^x$ & $e^x$ & $e^x$\\
+\hline
+\end{tabular}               % close the table
+\end{center}                % exit the center environment
+
+\section{Conclusions}\label{s:conc}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%     Bibliography
+%
+%     Use an easy-to-remember tag for each entry - eg \bibitem{How97} for an article/book by Howie in 1997
+%     To cite this publication in your text, write \cite{How97}.  To include more details such as
+%     page, Chapter, Theorem numbers, use the form \cite[Theorem 6.3, page 42]{How97}.
+%
+\begin{thebibliography}{99}
+
+% 
+% The usual convention for mathematical bibliographies is to list alphabetically
+% by first-named author (then second, third  etc. author then date)
+% websites with no author names should go by the site name
+%
+
+
+
+% Typical layout for reference to a journal article
+%
+\bibitem{Bovey}
+J. D. Bovey, M. M. Dodson,                         % author(s)
+The Hausdorff dimension of systems of linear forms % article name
+{\em Acta Arithmetica}                             % journal name - italics
+{\bf 45}                                           % volume number - bold
+(1986), 337--358.                                   % (year), page range
+
+% Typical layout for reference to a book
+%
+\bibitem{Cassels}
+J. W. S. Cassels,                                  % author(s)
+{\em An Introduction to Diophantine Approximation},% title - italics
+Cambridge University Press, Cambridge, 1965.       % Publisher, place, date.
+
+% Typical layout for reference to a website
+%
+\bibitem{GAP}
+The GAP Group, GAP -- Groups, Algorithms, and Programming,  % Site name
+Version 4.5.6; 2012. % other information
+(http://www.gap-system.org)  % URL
+
+
+% Typical layout for reference to an online article
+%
+\bibitem{Howie}
+J. Howie,                                            % author(s)
+{\em Generalised triangle groups of type $(3,5,2)$}, % article name - italics
+http://arxiv.org/abs/1102.2073                       % URL
+(2011).                                              % (year)
+\end{thebibliography}
+\end{document}

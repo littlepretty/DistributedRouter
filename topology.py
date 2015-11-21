@@ -2,19 +2,21 @@
 
 class DRRouter(object):
     "Distributed routers"
-
     def __init__(self, name, topo=None):
         """Create router with:
-        @name: unique ID
-        @topo: a dictionary of router name to its corresponding row and column
-        in the network matrix. Row(a dictionary) stores outgoing link cost
-        from this router; Column(a dictionary) stores incoming link cost
-        to this router. A complete @topo represent the network's entire topology.
-        Router should use it to create graph weight matrix @self.network_matrix.
-        @neighbors: list of routers can be reached from
-        @recv_buffer: a dictionary storing the messages received from
-        other routers
-        @converged: indicate if @self.topo is complete
+
+        Attributes:
+            @name: unique ID
+            @topo: a dictionary of router name to its corresponding row and column
+                in the network matrix. Row(a dictionary) stores outgoing link cost
+                from this router; Column(a dictionary) stores incoming link cost
+                to this router. A complete @topo represent the network's entire to
+                pology.Router should use it to create graph weight matrix
+                @self.network_matrix.
+            @neighbors: list of routers can be reached from
+            @recv_buffer: a dictionary storing the messages received from
+                other routers
+            @converged: indicate if @self.topo is complete
         """
         super(DRRouter, self).__init__()
         self.name = name
@@ -28,8 +30,7 @@ class DRRouter(object):
         self.converged = False
 
     def discover_neighbors(self):
-        """
-        Discovery routers that can be reached from.
+        """Discovery routers that can be reached from.
         """
         if self.name in self.topo.keys():
             row = self.topo[self.name][0] # get row of that tuple
@@ -38,8 +39,7 @@ class DRRouter(object):
                     self.neighbors.append(dst)
 
     def recv_msg(self, msg):
-        """
-        Put @msg into @self.recv_buffer
+        """Put @msg into @self.recv_buffer
         @msg is a tuple/entry to be added to buffer:
             msg[0] is the router name, msg[1] stores a tuple of (row, col)
         """
@@ -47,8 +47,7 @@ class DRRouter(object):
             self.recv_buffer[msg[0]] = msg[1]
 
     def update_topo(self):
-        """
-        Handle all the messages in the receive buffer
+        """Handle all the messages in the receive buffer
         @updated: return this flag to tell if @self.topo is updated
         """
         updated = False
@@ -66,8 +65,7 @@ class DRRouter(object):
         pass
 
 def get_router_by_name(name, routers):
-    """
-    return DRRouter object providing a router name
+    """return DRRouter object with provided router name
     """
     for r in routers:
         if r.name == name:
@@ -75,8 +73,7 @@ def get_router_by_name(name, routers):
     return None
 
 def SimulateTopologyDiscovery():
-    """
-    Simulate the topology discovery process
+    """Simulate the topology discovery process
     """
     r1 = DRRouter('r1', {'r1' : ({'r2':3},
                                  {'r2':4})})
