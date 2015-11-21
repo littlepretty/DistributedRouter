@@ -13,7 +13,7 @@ class DRRouter(object):
                 to this router. A complete @topo represent the network's entire to
                 pology.Router should use it to create graph weight matrix
                 @self.network_matrix.
-            @neighbors: list of routers can be reached from
+            @recv_from: list of routers can be reached from
             @recv_buffer: a dictionary storing the messages received from
                 other routers
             @converged: indicate if @self.topo is complete
@@ -22,7 +22,7 @@ class DRRouter(object):
         self.name = name
         self.topo = topo
 
-        self.neighbors = [] # send @self.topo to them
+        self.recv_from = [] # send @self.topo to them
         self.discover_neighbors()
 
         self.recv_buffer = {}
@@ -33,10 +33,10 @@ class DRRouter(object):
         """Discovery routers that can be reached from.
         """
         if self.name in self.topo.keys():
-            row = self.topo[self.name][0] # get row of that tuple
-            for dst in row.keys():
-                if dst not in self.neighbors:
-                    self.neighbors.append(dst)
+            col = self.topo[self.name][1] # get column/incoming link of that tuple
+            for src in col.keys():
+                if src not in self.recv_from:
+                    self.recv_from.append(src)
 
     def recv_msg(self, msg):
         """Put @msg into @self.recv_buffer
@@ -87,16 +87,29 @@ def SimulateTopologyDiscovery():
                                  {'r4':11})})
     r6 = DRRouter('r6', {'r6' : ({'r2':8, 'r3':5},
                                  {'r5':9})})
+
     routers = [r1, r2, r3, r4, r5, r6]
-    for router in routers:
-        print router.name, "will recv from", router.neighbors
+
+    # for router in routers:
+    #     print router.name, "will recv from", router.recv_from
 
     updated = True
     iter_count = 1
+
     num_routers = float(len(routers))
+
+    saw = float(len(r1.topo.keys()))
+    p0 = saw / num_routers * 100
+    r1_progress = [p0]
+    saw = float(len(r6.topo.keys()))
+    p0 = saw / num_routers * 100
+    r6_progress = [p0]
+
+    topo_base_file1 = open('r1.topo', 'w+')
+    topo_base_file6 = open('r6.topo', 'w+')
     while updated:
         for r in routers:
-            for n in r.neighbors:
+            for n in r.recv_from:
                 router_n = get_router_by_name(n, routers)
                 for n_name, n_row_col in router_n.topo.items():
                     n_msg = (n_name, n_row_col)
@@ -107,13 +120,26 @@ def SimulateTopologyDiscovery():
             if r.update_topo():
                 updated = True
                 saw = float(len(r.topo.keys()))
-                print "%s saw %f%% of the network at %d iteration" % (r.name, saw / num_routers * 100, iter_count)
+                if r.name == 'r1':
+                    topo_base_file1.write("%d  %s\n" % (iter_count, sorted(r.topo.items())))
+                    r1_progress.append(saw / num_routers * 100)
+                if r.name == 'r6':
+                    topo_base_file6.write("%d  %s\n" % (iter_count, sorted(r.topo.items())))
+                    r6_progress.append(saw / num_routers * 100)
 
         iter_count += 1
 
+    r1_progress.append(100)
+    r6_progress.append(100)
+    i = 0
+    progress_file = open('progress.dat', 'w+')
+    for p1, p6 in zip(r1_progress, r6_progress):
+        progress_file.write("%d\t%3.3f\t%3.3f" % (i, p1, p6))
+        i += 1
+    progress_file.close()
+
     for r in routers:
         r.converged = True
-        print r.topo
 
 if __name__ == '__main__':
     SimulateTopologyDiscovery()
