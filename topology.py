@@ -3,20 +3,16 @@
 class DRRouter(object):
     "Distributed routers"
     def __init__(self, name, topo=None):
-        """Create router with:
+        """Create router obect.
 
-        Attributes:
-            @name: unique ID
-            @topo: a dictionary of router name to its corresponding row and column
-                in the network matrix. Row(a dictionary) stores outgoing link cost
-                from this router; Column(a dictionary) stores incoming link cost
-                to this router. A complete @topo represent the network's entire to
-                pology.Router should use it to create graph weight matrix
-                @self.network_matrix.
-            @recv_from: list of routers can be reached from
-            @recv_buffer: a dictionary storing the messages received from
-                other routers
-            @converged: indicate if @self.topo is complete
+        name: unique string ID
+        topo: Topology database: map router name to its corresponding
+            row and column in the network matrix. Row(a dictionary) stores
+            outgoing link cost from this router; column(a dictionary) stores
+            incoming link cost to this router.
+        recv_from: list of routers can be reached from
+        recv_buffer: a dictionary storing the messages received from other routers
+        converged: indicate if @self.topo is complete
         """
         super(DRRouter, self).__init__()
         self.name = name
@@ -30,8 +26,7 @@ class DRRouter(object):
         self.converged = False
 
     def discover_neighbors(self):
-        """Discovery routers that can be reached from.
-        """
+        """Discovery routers that can be reached from"""
         if self.name in self.topo.keys():
             col = self.topo[self.name][1] # get column/incoming link of that tuple
             for src in col.keys():
@@ -40,15 +35,18 @@ class DRRouter(object):
 
     def recv_msg(self, msg):
         """Put @msg into @self.recv_buffer
-        @msg is a tuple/entry to be added to buffer:
-            msg[0] is the router name, msg[1] stores a tuple of (row, col)
+
+        msg -- a tuple/entry to be added to buffer
+        msg[0] -- the router name
+        msg[1] -- stores a tuple of (row, col)
         """
         if msg[0] not in self.recv_buffer.keys():
             self.recv_buffer[msg[0]] = msg[1]
 
     def update_topo(self):
         """Handle all the messages in the receive buffer
-        @updated: return this flag to tell if @self.topo is updated
+
+        updated -- return this flag to tell if @self.topo is updated
         """
         updated = False
         for router in self.recv_buffer.keys():
@@ -58,14 +56,15 @@ class DRRouter(object):
         self.recv_buffer = {} # clear receive buffer
         return updated
 
-    def create_graph_matrix(self):
-        if self.converged:
-            pass
     def create_routing_table(self):
+        """Not implemented yet"""
         pass
 
 def get_router_by_name(name, routers):
-    """return DRRouter object with provided router name
+    """Search DRRouter object with provided router name
+
+    name -- the name of the router
+    routers -- all routers in the network
     """
     for r in routers:
         if r.name == name:
@@ -73,8 +72,7 @@ def get_router_by_name(name, routers):
     return None
 
 def SimulateTopologyDiscovery():
-    """Simulate the topology discovery process
-    """
+    """Simulate the topology discovery process"""
     r1 = DRRouter('r1', {'r1' : ({'r2':3},
                                  {'r2':4})})
     r2 = DRRouter('r2', {'r2' : ({'r1':4, 'r3':6},
@@ -143,7 +141,5 @@ def SimulateTopologyDiscovery():
 
 if __name__ == '__main__':
     SimulateTopologyDiscovery()
-
-
 
 
