@@ -19,14 +19,17 @@ class DRRouter(object):
         self.topo = topo
 
         self.recv_from = [] # send @self.topo to them
+
         self.discover_neighbors()
 
         self.recv_buffer = {}
-        self.network_matrix = []
+
+        self.routing_table = {}
+
         self.converged = False
 
     def discover_neighbors(self):
-        """Discovery routers that can be reached from"""
+        """Discovery routers that this router can be reached from"""
         if self.name in self.topo.keys():
             col = self.topo[self.name][1] # get column/incoming link of that tuple
             for src in col.keys():
@@ -46,7 +49,7 @@ class DRRouter(object):
     def update_topo(self):
         """Handle all the messages in the receive buffer
 
-        updated -- return this flag to tell if @self.topo is updated
+        Return updated -- a flag to tell if @self.topo is updated
         """
         updated = False
         for router in self.recv_buffer.keys():
@@ -56,9 +59,76 @@ class DRRouter(object):
         self.recv_buffer = {} # clear receive buffer
         return updated
 
+    def discover_adjacents(self, router_name):
+        """Discovery routers that a particular router can reach
+
+        Return adjacents: a list of router names
+        """
+        adjacents = []
+        if self.converged:
+            if router_name in self.topo.keys():
+                row = self.topo[router_name][0]
+                for dst in row.keys():
+                    adjacents.append(dst)
+        return adjacents
+
     def create_routing_table(self):
-        """Not implemented yet"""
-        pass
+        """Dijkstra's shortest path algorithm"""
+        if not self.converged:
+            return
+        heap = []
+        for router_name in self.topo.keys():
+            adjacents = self.discover_adjacents(router_name)
+            u = DRNode(router_name, adjacents)
+            if u.name == self.name:
+                u.dist = 0
+            heap.append(u)
+
+        while heap:
+            heap.sort(key=lambda node: node.dist, reverse=False)
+            u = heap.pop(0)
+            self.routing_table[u.name] = {'dist': u.dist, 'pi': u.pi}
+            for v_name in u.adjacents:
+                v = get_node_by_name(v_name, heap)
+                # v may be None if we have a loop in the topology
+                if v and v.dist > u.dist + self.topo[u.name][0][v.name]:
+                    v.dist = u.dist + self.topo[u.name][0][v.name]
+                    v.pi = u
+        # backtrack along the pi to get the next hop for this router
+        for u_name in self.topo.keys():
+            if u_name != self.name:
+                next_name = u_name
+                prev = self.routing_table[u_name]['pi']
+                while prev.name != self.name:
+                    next_name = prev.name
+                    prev = prev.pi
+                self.routing_table[u_name]['next'] = next_name
+            else: # next hop to itself is itself
+                self.routing_table[u_name]['next'] = u_name
+
+    def print_routing_table(self):
+        print "Routing table for %s" % self.name
+        print '-' * 38
+        for dst in self.routing_table.keys():
+            print "%s\tcost = %d\tnext hop = %s" % (dst, \
+                self.routing_table[dst]['dist'], self.routing_table[dst]['next'])
+        print '-' * 38
+        print
+
+class DRNode(object):
+    def __init__(self, name, adjacents):
+        super(DRNode, self).__init__()
+        self.name = name
+        # use an arbitrary large value as infinity
+        self.dist = 999999999
+        self.pi = None
+        self.adjacents = adjacents
+
+def get_node_by_name(name, nodes):
+    for n in nodes:
+        if n.name == name:
+            return n
+    return None
 
 def get_router_by_name(name, routers):
     """Search DRRouter object with provided router name
@@ -119,10 +189,12 @@ def SimulateTopologyDiscovery():
                 updated = True
                 saw = float(len(r.topo.keys()))
                 if r.name == 'r1':
-                    topo_base_file1.write("%d  %s\n" % (iter_count, sorted(r.topo.items())))
+                    topo_base_file1.write("%d  %s\n" % \
+                                    (iter_count, sorted(r.topo.items())))
                     r1_progress.append(saw / num_routers * 100)
                 if r.name == 'r6':
-                    topo_base_file6.write("%d  %s\n" % (iter_count, sorted(r.topo.items())))
+                    topo_base_file6.write("%d  %s\n" % \
+                                    (iter_count, sorted(r.topo.items())))
                     r6_progress.append(saw / num_routers * 100)
 
         iter_count += 1
@@ -138,6 +210,8 @@ def SimulateTopologyDiscovery():
 
     for r in routers:
         r.converged = True
+        r.create_routing_table()
+        r.print_routing_table()
 
 if __name__ == '__main__':
     SimulateTopologyDiscovery()

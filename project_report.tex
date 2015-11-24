@@ -41,18 +41,18 @@
 %
 %        Preamble material specific to your essay
 %
-\title{Discovery Network Topology}
-\author{Jiaqi Yan\\
+\title{Network Topology Discovery}
+\author{Yan Jiaqi\\
+A20321362\\
 CS542 Project\\
-supervised by
-Edward Chlebus}
+Lectured by Prof. Edward Chlebus}
 
 \begin{document}
 \maketitle
 
 % \newpage                     % optional page break
 \begin{abstract}
-In this project, we first propose the format of topology update message for correct topology discovery.
+In this project, we first propose the content of topology update message for correct topology discovery.
 The \textit{portion of the network seen by a router} is used to quantify the efficiency of the network update process.
 A small scale network built by 6 routers is simulated to demonstrate the process of populating topology information.
 The simulation, as well as the distributed discovery algorithm, should terminate when every router's \textit{topology database} is stable.
@@ -75,7 +75,7 @@ Here we are considering unidirectional links.
 So \textbf{neighbors} of a particular router $r$ can fall into one of two cases: the one that can be reached from $r$ and the one that can reach $r$.
 
 The problem can be stated more formally as follows. The network topology as the adjacent matrix $AM$ is given to us.
-An example is shown below:
+An example which we will simulate is shown below:
 \begin{center}
 \begin{tabular}{|r|r|r|r|r|r|r|}        % 7 columns, each right-justified
 \hline                                  % horizontal line between rows
@@ -97,40 +97,47 @@ $R_6$ &   & 8 & 5 &   &    & \\
 \end{center}
 The cost from source router $s$ to destination $d$ is given as $AM[s][d]$.
 Empty cell means the cost is $\infty$, meaning no link exist between router $s$ and $d$.
-Every router $r$ maintain its \textbf{topology database}. 
-Initially, this database contains only row $r$ and column $r$ in matrix $AM$ because
+Every router $r$ maintain its \textbf{topology database}.
+Initially, this database in a given router $r$ contains only row $r$ and column $r$ in matrix $AM$ because
 \begin{itemize}
-        \item $r$ is aware the routers it can goes to, corresponding to row $AM[r][0..N-1]$
-        \item $r$ knows the routers that can goes to itself, corresponding to column $AM[0..N-1][r]$
+        \item $r$ is aware the routers it can goes to, corresponding to row $AM[r][0..N-1]$, all the outgoing links.
+        \item $r$ knows the routers that can goes to itself, corresponding to column $AM[0..N-1][r]$, all the incoming links.
 \end{itemize}
 The problem is: how to let each router has the entire topology matrix?
+Because if a router has the complete topology matrix/database, it can further run Dijkstra's algorithm to obtain a shortest path tree, whose root is the router $r$ itself;
+next hop for any network or any other router can then be computed via this shortest path tree.
 
 \section{Discovery Process}
 
 \subsection{Message Format}
-The solution is simple.
-Every router advertise its current known column and row in its the incomplete.
-Once a router receives advertisement from other router, if the router does not have any (row, column) tuples in the messages, it inserts this information to its database.
-In other words, the essential of each message is the name of the router/sender, which, playing as a \textit{key}, indicate the row index and column index this message contains.
-Then goes the \textit{value}, a tuple containing the elements in the row and the elements in the column.
-An advertisement from any router contains a sequence of messages if the router has more than 1 (row, column) record in its database.
+The solution to topology discovery itself is simple.
+Every router advertise its current known links (column and row in its incomplete database).
+Once a router receives advertisement from other routers, it checks if the sender's links are in its database.
+If not, it inserts this (row, column) tuple to its database with sender's identity as the table index.
+In other words, the essential of each message is the name of the router/sender, which, playing as a \textit{key}, indicate the row index and column index this message should be placed.
+Then goes the \textit{value}, a tuple containing associated links for the sender, that is, the elements in the row and the elements in the column.
+An advertisement from any router contains a sequence of messages if the source router has more than 1 (row, column) record in its database.
 
 \subsection{Measuring the Discovery Process}
 An obvious metric is the percentage of the network topology matrix a router currently has.
-For example, at the initial stage, every router only knows 1 row and 1 column of the matrix.
+For the example mentioned above, at the initial stage, every router only knows 1 row and 1 column of the matrix.
 So everyone starts from percentage $1/N$ where $N$ is total number of routers in the network.
 At iteration $n=1$, $R_2$ received messages from router $R_1$ and $R_6$; then it has 3 rows and 3 colums, which means 50\% of the network is known to $R_2$.
 
 \section{Simulation and Termination}
 We can simulate the distributed discovery process.
 Simulation's basic flow is shown in Listing \ref{lst:while-loop}.
+Notice that this simulation assume that all routers are \textbf{synchronized} after each iteration.
 
 \subsection{Termination}
 The discovery step is repeated until all of the routers' topology database is stable.
 That is, we jump out of the while-loop when the boolean variable $updated$ is never set to $True$ when any router $r$ invokes \texttt{update\_topo()}.
 The reason is simple: if every router's topology database is identical, no new information will be transferred between each other.
 At this moment, all routers must have the same and correct network view, except for that something happened after the population ends.
-In this case, just restart the discovery process at each router and wait for them to converge again.
+In fact, if assuming that no change happens during the topology discovery/update process, it will always terminate in $L$ iterations, where $L$ is the length of the longest path in the network graph.
+Therefore, the worst case time complexity of this distributed algorithm is bounded by $O(N)$, where $N$ is the number of routers in the graph.
+In the case that network is changed, just restart the discovery process at each router and wait for them to converge again.
+This topology update process can also be done incrementally.
 
 \subsection{Code Structure}
 Inside the while-loop, we have a scatter-gather pattern.
@@ -178,6 +185,8 @@ In this section, the discovery progresses for router $R_1$ and $R_6$ are shown.
 
 \subsection{Results for $R_1$}
 At each iteration, the snapshot of $R_1$'s topology database is shown in Listing \ref{lst:r1}.
+Each entry in the database is indexed by router name or id.
+Inside the entry stores the links, both outgoing and incoming type, of the index router.
 For example, at the 3rd iteration, $R_1$ found out 3 other routers exist in the network.
 One of them is called $R6$, who can reach $R_2$ and $R_3$ with cost 8 and 5 respectively;
 also this $R_6$ can be reached from another router $R_5$ with cost 9.
@@ -199,25 +208,25 @@ also this $R_6$ can be reached from another router $R_5$ with cost 9.
         language=Python}
 \begin{lstlisting}
 0  [  ('r1', ({'r2': 3}, {'r2': 4}))  ]
-1  [  ('r1', ({'r2': 3}, {'r2': 4})), 
+1  [  ('r1', ({'r2': 3}, {'r2': 4})),
       ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3}))  ]
-2  [  ('r1', ({'r2': 3}, {'r2': 4})), 
-      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
+2  [  ('r1', ({'r2': 3}, {'r2': 4})),
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-3  [  ('r1', ({'r2': 3}, {'r2': 4})), 
-      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+3  [  ('r1', ({'r2': 3}, {'r2': 4})),
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-4  [  ('r1', ({'r2': 3}, {'r2': 4})), 
-      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
-      ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+4  [  ('r1', ({'r2': 3}, {'r2': 4})),
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
+      ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-5  [  ('r1', ({'r2': 3}, {'r2': 4})), 
-      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
-      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
-      ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+5  [  ('r1', ({'r2': 3}, {'r2': 4})),
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})),
+      ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
 \end{lstlisting}
 
@@ -245,25 +254,25 @@ also this $R_3$ can be reached from either router $R_6$ with cost 5 or router $R
         language=Python}
 \begin{lstlisting}
 0  [  ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-1  [  ('r5', ({'r6': 9}, {'r4': 11})), 
+1  [  ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-2  [  ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+2  [  ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-3  [  ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
-      ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+3  [  ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})),
+      ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-4  [  ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
-      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
-      ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+4  [  ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})),
+      ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
-5  [  ('r1', ({'r2': 3}, {'r2': 4})), 
-      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})), 
-      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})), 
-      ('r4', ({'r5': 11}, {'r3': 7})), 
-      ('r5', ({'r6': 9}, {'r4': 11})), 
+5  [  ('r1', ({'r2': 3}, {'r2': 4})),
+      ('r2', ({'r1': 4, 'r3': 6}, {'r6': 8, 'r1': 3})),
+      ('r3', ({'r4': 7}, {'r6': 5, 'r2': 6})),
+      ('r4', ({'r5': 11}, {'r3': 7})),
+      ('r5', ({'r6': 9}, {'r4': 11})),
       ('r6', ({'r2': 8, 'r3': 5}, {'r5': 9}))  ]
 \end{lstlisting}
 
