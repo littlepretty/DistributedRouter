@@ -31,12 +31,10 @@ def SimulateTopologyDiscovery():
 
     routers = [r1, r2, r3, r4, r5, r6]
 
-    # for router in routers:
-    #     print router.name, "will recv from", router.recv_from
+    for router in routers:
+        print router.name, "will recv from", router.recv_from
 
-    updated = True # flag: if all routers converged?
     iter_count = 1
-
     num_routers = float(len(routers))
 
     # initialize progress array at iteration 0
@@ -49,6 +47,8 @@ def SimulateTopologyDiscovery():
 
     topo_base_file1 = open('r1.topo', 'w+')
     topo_base_file6 = open('r6.topo', 'w+')
+
+    updated = True # termination flag: if all routers converged?
     while updated:
         # scatter phase: receive from its neighbors
         for r in routers:
