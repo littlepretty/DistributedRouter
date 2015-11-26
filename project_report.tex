@@ -69,10 +69,9 @@ Simulation results are shown for both router $R_1$ and router $R_6$.
 % labelled by \label{key}, use \ref{key}.  For example: Equation (\ref{eq:key}) follows from Theorem \ref{th:key}.
 
 In this project, we explore the problem of letting distributed routers know the entire network topology.
-As the `God' of the network, we network operator have the global view of the it.
-The routers, however, only knows its direct neighbors. 
-Here we are considering unidirectional links.
-So \textbf{neighbors} of a particular router $r$ can fall into one of two cases: the one that can be reached from $r$ and the one that can reach $r$.
+As the `God' of the network, we network operator have the global view of the network.
+The routers, however, only knows its direct neighbors.
+Since we are considering unidirectional links, \textbf{neighbors} of a particular router $r$ can fall into one of two cases: the one that can be reached from $r$ and the one that can reach $r$.
 
 The problem can be stated more formally as follows. The network topology as the adjacent matrix $AM$ is given to us.
 An example which we will simulate is shown below:
@@ -100,13 +99,13 @@ Empty cell means the cost is $\infty$, meaning no link exist between router $s$ 
 Every router $r$ maintain its \textbf{topology database}.
 Initially, this database in a given router $r$ contains only row $r$ and column $r$ in matrix $AM$ because
 \begin{itemize}
-        \item $r$ is aware the routers it can goes to, corresponding to row $AM[r][0..N-1]$, all the outgoing links.
-        \item $r$ knows the routers that can goes to itself, corresponding to column $AM[0..N-1][r]$, all the incoming links.
+        \item $r$ is aware the routers it can directly go to, corresponding to row $AM[r][0..N-1]$, all the outgoing links.
+        \item $r$ knows the routers that can directly go to itself, corresponding to column $AM[0..N-1][r]$, all the incoming links.
 \end{itemize}
 
 The problem is: how to let each router has the entire topology matrix or database?
-The motivation is that if a router has the complete topology matrix/database, it can further run Dijkstra's algorithm to obtain a shortest path tree, whose root is the router $r$ itself;
-next hop for any network or any other router can then be obtained from this shortest path tree.
+The motivation is that if a router has the complete topology matrix, it can further run Dijkstra's algorithm to obtain a shortest path tree, whose root is the router $r$ itself.
+Next hop for any network or any other router can then be obtained from this shortest path tree.
 In other words, it can automatically and dynamically create/update its routing table\footnote{Just out of my interest, I implemented the procedure of routing table creation based on Dijkstra's shortest path algorithm.
 Not described in this report but can be found in the source code for router}.
 
@@ -114,16 +113,16 @@ Not described in this report but can be found in the source code for router}.
 
 \subsection{Message Format}
 The solution to topology discovery itself is simple.
-Every router advertise its current known links (column and row in its incomplete database) to its downstream neighbors.
-In essential, each message is consist of 2 parts.
+Every router advertises its current known links (column and row in its incomplete database) to its downstream neighbors.
+Each advertising message consists of 2 parts.
 
-The first field is called the key of the message $k_m$.
+The first field $k_m$ is called the key of the message.
 It is a unique ID for a router in the network, which, playing as a \textit{key}, indicates the row index and column index in the imaginary topology matrix.
 
 Then goes the links encapsulated inside the message.
 It is a 2-element tuple containing associated links of the router identified by the key $k_m$.
 In terms of topology matrix, this tuple contains the row and the column corresponding to this keyed router.
-Both elements in this tuple is a key-value dictionary structure: the keys are still a router ID and its values are the cost of links.
+Both elements in this tuple are key-value map structure: the keys are still a router ID and its values are the cost of links.
 However, the interpretation of the cost is different for the 1st and 2nd element in this tuple.
 The 1st elements specifies the cost of outing links while the 2nd element specifies the incoming links.
 For example, the cost value associated with a key $k_1$ in the first element represents the cost from router $k_m$ to router $k_1$;
@@ -149,13 +148,14 @@ The discovery step is repeated until all of the routers' topology database is st
 That is, we jump out of the while-loop when the boolean variable $updated$ is never set to $True$ when any router $r$ invokes \texttt{update\_topo()}.
 The reason is simple: if every router's topology database is identical, no new information will be transferred between each other.
 At this moment, all routers must have the same and correct network view, except for that something happened after the population ends.
+
 In fact, if assuming that no change happens during the topology discovery/update process, it will always terminate in $L$ iterations, where $L$ is the length of the longest path in the network graph.
 Therefore, the worst case time complexity of this distributed algorithm is bounded by $O(N)$, where $N$ is the number of routers in the graph.
 In the case that network is changed, just restart the discovery process at each router and wait for them to converge again.
 This topology update process can also be done incrementally.
 
 \subsection{Code Structure}
-Inside the while-loop, we have a scatter-gather pattern.
+Inside the while-loop of simulation, we have a scatter-gather pattern.
 In the scatter phase, router $r$ will receive messages from its each neighbors $n$ who can reach $r$ directly.
 In the gathering phase, each router update its topology databased by handling the received messages, which is stored inside its buffer at the scatter phase.
 The processing is very simple: if router $r$ have seen a message with unknown key, it inserts the links inside this message to its database with this unseen key.
@@ -313,9 +313,9 @@ So the number of iterations is 7 for our simulation.
 \end{lstlisting}
 
 \subsection{Discovery Percentage as a function of the iteration number}
-As a function of iteration, the percentage of network discovered by router $R_1$ and $R_6$ is shown in Figure \ref{fig:progress}.
+As a function of iteration, the percentage of network discovered by both router $R_1$ and $R_6$ is shown in Figure \ref{fig:progress}.
 The iteration number begins from 0 and ends at 6, an extra iteration to ensure that all routers in this network hold identical topology database.
-As we can see the progress grow linearly at each iteration: at each step router $R_1$ and $R_6$ found a new router and its links.
+As we can see the progress grows linearly at each iteration: at each step, router $R_1$ and $R_6$ found a new router and its links.
 
 \begin{figure}[h]
 \centering
