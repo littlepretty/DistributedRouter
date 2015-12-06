@@ -2,7 +2,7 @@
 
 from drrouter import DRRouter
 
-def SimulateTopologyDiscovery():
+def simulate_topology_discovery():
     """Simulate the topology discovery process"""
     def get_router_by_name(name, routers):
         """Search DRRouter object with provided router name
@@ -28,7 +28,6 @@ def SimulateTopologyDiscovery():
                                  {'r4':11})})
     r6 = DRRouter('r6', {'r6' : ({'r2':8, 'r3':5},
                                  {'r5':9})})
-
     routers = [r1, r2, r3, r4, r5, r6]
 
     for router in routers:
@@ -93,6 +92,5 @@ def SimulateTopologyDiscovery():
         r.print_routing_table()
 
 if __name__ == '__main__':
-    SimulateTopologyDiscovery()
-
+    simulate_topology_discovery()
 

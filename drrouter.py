@@ -1,18 +1,21 @@
 #!/usr/bin/python
 
 class DRNode(object):
-    "Extra info used by router to compute shortest path"
+    "Extra info used by a router to compute shortest path"
     def __init__(self, name, adjacents):
         """Create DRNode object
 
         name(str) -- unique name of the router
-        adjacents(list) -- all the names of its adjacents"""
+        adjacents(list) -- all the names of its adjacents
+        dist -- distance to this node from the running router
+        pi -- previous hop to this node from running router
+        """
         super(DRNode, self).__init__()
         self.name = name
+        self.adjacents = adjacents
         # use an arbitrary large value as infinity
         self.dist = 999999999
         self.pi = None
-        self.adjacents = adjacents
 
 class DRRouter(object):
     "Distributed routers"
@@ -26,7 +29,8 @@ class DRRouter(object):
             incoming link cost to this router.
         recv_from: list of routers can be reached from
         recv_buffer: a dictionary storing the messages received from other routers
-        converged: indicate if @self.topo is complete
+        converged: indicate if topology database is complete
+        routing_table: next hop to certain destination based on Dijkstra's SP
         """
         super(DRRouter, self).__init__()
         self.name = name
@@ -34,8 +38,8 @@ class DRRouter(object):
         self.recv_from = [] # send @self.topo to them
         self.discover_neighbors()
         self.recv_buffer = {}
-        self.routing_table = {}
         self.converged = False
+        self.routing_table = {}
 
     def discover_neighbors(self):
         """Discovery routers that this router can be reached from"""
@@ -46,7 +50,7 @@ class DRRouter(object):
                     self.recv_from.append(src)
 
     def recv_msg(self, msg):
-        """Put @msg into @self.recv_buffer
+        """Put messages into receiver's buffer
 
         msg -- a tuple/entry to be added to buffer
         msg[0] -- the router name
@@ -58,7 +62,7 @@ class DRRouter(object):
     def update_topo(self):
         """Handle all the messages in the receive buffer
 
-        Return updated -- a flag to tell if @self.topo is updated
+        updated -- return a flag to tell if @self.topo is updated
         """
         updated = False
         for router in self.recv_buffer.keys():
@@ -71,7 +75,7 @@ class DRRouter(object):
     def discover_adjacents(self, router_name):
         """Discovery routers that a particular router can reach
 
-        Return adjacents: a list of router names
+        adjacents: return a list of router names
         """
         adjacents = []
         if self.converged:
@@ -96,6 +100,7 @@ class DRRouter(object):
         if not self.converged:
             return
         heap = []
+        # create a node to each router in the network
         for router_name in self.topo.keys():
             adjacents = self.discover_adjacents(router_name)
             u = DRNode(router_name, adjacents)
@@ -105,8 +110,10 @@ class DRRouter(object):
 
         while heap:
             heap.sort(key=lambda node: node.dist, reverse=False)
+            # equivalent to heap.extract-min()
             u = heap.pop(0)
             self.routing_table[u.name] = {'dist': u.dist, 'pi': u.pi}
+            # do relaxation for all u's neighbors
             for v_name in u.adjacents:
                 v = get_node_by_name(v_name, heap)
                 # v may be None if we have a loop in the topology

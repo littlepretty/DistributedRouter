@@ -201,6 +201,17 @@ while updated:
 \section{Experiment Results}
 In this section, the discovery progresses for router $R_1$ and $R_6$ are shown.
 
+In the log that shows each iteration result, we use ``()" to group elements in tuple structure;
+we use ``\{\}" to group a sequence of key-value items and ``:" to separate key with value.
+For example, $(e_1, e_2, e_3)$ is a tuple with 3 elements;
+$\{k_1:v_1, k_2:v_2\}$ is a dictionary contains 2 key-value items;
+$(\{k_{11}:v_{11}, k_{12}:v_{12}\},\{k_{21}:k_{22}\})$ is a tuple of two dictionaries.
+This syntax is entirely adopted from Python's programming syntax.
+
+The topology database of a router at a particular iteration is printed out as a list of tuples, surrounded by ``[]" symbols.
+Each tuple represent a record of the database, first element as index and second element as content.
+The content is a two-element tuple depict link information.
+
 \subsection{Results for $R_1$}
 At each iteration, the snapshot of $R_1$'s topology database is shown in Listing \ref{lst:r1}.
 Each entry in the database is indexed by router name or id.
