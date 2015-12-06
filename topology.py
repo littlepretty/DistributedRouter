@@ -38,16 +38,17 @@ def simulate_topology_discovery():
 
     # initialize progress array at iteration 0
     saw = float(len(r1.topo.keys()))
-    p0 = saw / num_routers * 100
+    p0 = saw / num_routers
     r1_progress = [p0]
     saw = float(len(r6.topo.keys()))
-    p0 = saw / num_routers * 100
+    p0 = saw / num_routers
     r6_progress = [p0]
 
     topo_base_file1 = open('r1.topo', 'w+')
     topo_base_file6 = open('r6.topo', 'w+')
 
-    updated = True # termination flag: if all routers converged?
+    # termination flag: if all routers converged?
+    updated = True
     while updated:
         # scatter phase: receive from its neighbors
         for r in routers:
@@ -65,17 +66,17 @@ def simulate_topology_discovery():
                 saw = float(len(r.topo.keys()))
                 if r.name == 'r1':
                     topo_base_file1.write("%d  %s\n" % \
-                                    (iter_count, sorted(r.topo.items())))
-                    r1_progress.append(saw / num_routers * 100)
+                        (iter_count, sorted(r.topo.items())))
+                    r1_progress.append(saw / num_routers)
                 if r.name == 'r6':
                     topo_base_file6.write("%d  %s\n" % \
-                                    (iter_count, sorted(r.topo.items())))
-                    r6_progress.append(saw / num_routers * 100)
+                        (iter_count, sorted(r.topo.items())))
+                    r6_progress.append(saw / num_routers)
 
         iter_count += 1
     # extra progress after stable
-    r1_progress.append(100)
-    r6_progress.append(100)
+    r1_progress.append(1)
+    r6_progress.append(1)
 
     # write progress results to file
     i = 0

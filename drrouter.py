@@ -23,14 +23,17 @@ class DRRouter(object):
         """Create router obect.
 
         name: unique string ID
-        topo: Topology database: map router name to its corresponding
-            row and column in the network matrix. Row(a dictionary) stores
-            outgoing link cost from this router; column(a dictionary) stores
-            incoming link cost to this router.
+        topo: Topology database: map router name to its
+            corresponding row and column in the link matrix
+            Row(a dictionary) stores outgoing link cost
+            from this router; column(a dictionary) stores
+            incoming link cost to this router
         recv_from: list of routers can be reached from
-        recv_buffer: a dictionary storing the messages received from other routers
+        recv_buffer: a dictionary storing the messages
+            received from other routers
         converged: indicate if topology database is complete
-        routing_table: next hop to certain destination based on Dijkstra's SP
+        routing_table: next hop to certain destination
+            based on Dijkstra's SP
         """
         super(DRRouter, self).__init__()
         self.name = name
@@ -42,9 +45,10 @@ class DRRouter(object):
         self.routing_table = {}
 
     def discover_neighbors(self):
-        """Discovery routers that this router can be reached from"""
+        """Discovery routers that can reach self"""
         if self.name in self.topo.keys():
-            col = self.topo[self.name][1] # get column/incoming link of that tuple
+            # get column/incoming link of that tuple
+            col = self.topo[self.name][1]
             for src in col.keys():
                 if src not in self.recv_from:
                     self.recv_from.append(src)
@@ -62,7 +66,8 @@ class DRRouter(object):
     def update_topo(self):
         """Handle all the messages in the receive buffer
 
-        updated -- return a flag to tell if @self.topo is updated
+        updated -- return a flag to tell if topology
+            database is updated
         """
         updated = False
         for router in self.recv_buffer.keys():
@@ -73,9 +78,10 @@ class DRRouter(object):
         return updated
 
     def discover_adjacents(self, router_name):
-        """Discovery routers that a particular router can reach
+        """Discovery routers that a particular router
+        can reach
 
-        adjacents: return a list of router names
+        adjacents(list): router names
         """
         adjacents = []
         if self.converged:
@@ -112,7 +118,8 @@ class DRRouter(object):
             heap.sort(key=lambda node: node.dist, reverse=False)
             # equivalent to heap.extract-min()
             u = heap.pop(0)
-            self.routing_table[u.name] = {'dist': u.dist, 'pi': u.pi}
+            self.routing_table[u.name] = {'dist': u.dist, \
+                                          'pi': u.pi}
             # do relaxation for all u's neighbors
             for v_name in u.adjacents:
                 v = get_node_by_name(v_name, heap)
@@ -120,7 +127,8 @@ class DRRouter(object):
                 if v and v.dist > u.dist + self.topo[u.name][0][v.name]:
                     v.dist = u.dist + self.topo[u.name][0][v.name]
                     v.pi = u
-        # backtrack along the pi to get the next hop for this router
+        # backtrack along the pi to get
+        # the next hop for this router
         for u_name in self.topo.keys():
             if u_name != self.name:
                 next_name = u_name
@@ -137,8 +145,10 @@ class DRRouter(object):
         print "Routing table for %s" % self.name
         print '-' * 38
         for dst in self.routing_table.keys():
-            print "%s\tcost = %d\tnext hop = %s" % (dst, \
-                self.routing_table[dst]['dist'], self.routing_table[dst]['next'])
+            print "%s\tcost = %d\tnext hop = %s" % \
+                (dst, \
+                self.routing_table[dst]['dist'], \
+                self.routing_table[dst]['next'])
         print '-' * 38
         print
 

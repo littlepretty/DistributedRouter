@@ -2,6 +2,7 @@
 
 % amssymb package contains more mathematical symbols
 \usepackage{amssymb,amsthm}
+\usepackage{hyperref}
 
 % graphicx package enables you to paste in graphics
 \usepackage{graphicx}
@@ -330,10 +331,16 @@ As we can see the progress grows linearly at each iteration: at each step, route
 
 \begin{figure}[h]
 \centering
-        \includegraphics[width=0.8\textwidth, height=0.8\textheight]{progress.ps}
+        \includegraphics[scale=0.6]{progress.ps}
 \caption{Discovery Percentage as Function of Iteration for $R_1$ and $R_6$}
 \label{fig:progress}
 \end{figure}
+
+\appendix
+\section{Source Code Printout}
+The printout of all source code used in this project.
+\lstinputlisting[language=Python, caption={Source Code for Router: \lstname}]{drrouter.py}
+\lstinputlisting[language=Python, caption={Source Code for Simulation, \lstname}]{topology.py}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
